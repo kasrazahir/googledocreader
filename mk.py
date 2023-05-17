@@ -1,17 +1,9 @@
 import streamlit as st
-from google.oauth2.credentials import Credentials
-from googleapiclient.discovery import build
-from google.oauth2 import service_account
+import requests
+from bs4 import BeautifulSoup
 
 # Initialize Google Drive API
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
-
-
-creds = service_account.Credentials.from_service_account_info(
-    st.secrets["gcp_service_account"]    
-)
-
-service = build("drive", "v3", credentials=creds)
 
 # Define a list of files to display
 file_list = [
@@ -28,16 +20,15 @@ file_list = [
     {
         "id": "17ia_mo9YIzfZA73n7MD77lfY7db2w_Hjy_d9ZpqEUyA",
         "title": "Forecasting",
-        "Type": "document"
+        "type": "document"
     }
 ]
 
-# Function to get file content
-def get_file_content(file_id):
-    service = build('drive', 'v3', credentials=creds)
-    file = service.files().export(fileId=file_id, mimeType='text/html').execute()
-    content = file.decode('utf-8')
-    return content
+# Function to get the HTML content of the Google Doc
+def get_google_doc_html(file_id):
+    url = f"https://docs.google.com/document/d/{file_id}/export?format=html"
+    response = requests.get(url)
+    return response.text
 
 # Define the welcome message
 welcome_message = """
@@ -64,14 +55,12 @@ for file in file_list:
         button_states[file["title"]] = False
 
 # Apply CSS styling to the buttons to set equal width
-# Apply CSS styling to the buttons to make them look like links
-
 button_style = """
 .stButton>button {
-        background-color: transparent;
-        border: none;
-        cursor: pointer;
-    }
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
 
 .stButton>button:hover {
     background-color: transparent;
@@ -86,11 +75,19 @@ st.sidebar.markdown(
     unsafe_allow_html=True
 )
 
-
+# Function to process images within the HTML content
+def process_images(html_content):
+    soup = BeautifulSoup(html_content, "html.parser")
+    images = soup.find_all("img")
+    for image in images:
+        image_url = image["src"]
+        # st.image(image_url, use_column_width=True)
+    return str(soup)
 
 # Display the selected file content or the welcome message
 if selected_page is None:
     st.markdown(welcome_message)
 else:
-    content = get_file_content(selected_page["id"])
-    st.markdown(content.replace('<a ', '<a target="_self" '), unsafe_allow_html=True)
+    content = get_google_doc_html(selected_page["id"])
+    processed_content = process_images(content)
+    st.markdown(processed_content, unsafe_allow_html=True)
