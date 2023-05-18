@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 # Initialize Google Drive API
 SCOPES = ["https://www.googleapis.com/auth/drive.readonly"]
 
+st.config.set_option('theme', 'light')
 # Define a list of files to display
 file_list = [
     {
